@@ -56,11 +56,38 @@ def readUrls():
   print(urls)
   for i in range(len(urls)):
     getFiles(urls[i])
-  logfile.close()
-  sys.exit()
+
+#ping to see if NAS is up
+def pingNAS(ip):
+  from pythonping import ping
+  up = False
+  while True:
+    response = ping(ip, size=40, count=10)
+    if 1000.0 >= float(response.rtt_avg_ms):
+      up = True
+      break
+    else :
+      up = False
+  return up
+
+#copy files to NAS
+def send2NAS(ip):
+  import shutil
+  sysyear, sysmon, sysday, syshour, sysmin, syssec = getTime()
+  logfile.write(f'[{sysyear}/{sysmon}/{sysday} {syshour}:{sysmin}:{syssec}] - Attempting to connect to NAS @ {ip}\n')
+  while True:
+    if pingNAS(ip) == True:
+      break
+  sysyear, sysmon, sysday, syshour, sysmin, syssec = getTime()
+  logfile.write(f'[{sysyear}/{sysmon}/{sysday} {syshour}:{sysmin}:{syssec}] - Transferring files to {ip}\n')
+  filename = f'/nfs/botdata/webGrabber/download-|{startyear}-{startmonth}-{startday}|{starthour}:{startminute}:{startsecond}'
+  print(f'Making {filename}...')
+  shutil.copytree(f'/home/duncan/downloadedfiles',filename)
 
 #main
 if starthour == '--' and startminute == '--' and startsecond == '--':
+  sysyear, sysmon, sysday, syshour, sysmin, syssec = getTime()
+  starthour, startminute, startsecond = syshour, sysmin, syssec
   readUrls()
 else:
   while True:
@@ -70,3 +97,6 @@ else:
       readUrls()
     else:
       time.sleep(1)
+send2NAS('192.168.1.12')
+logfile.close()
+sys.exit()
